@@ -1,94 +1,61 @@
 pipeline {
-
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = 'dockerhub-creds'
-        DOCKER_REGISTRY = 'rabtab'
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        GIT_COMMIT_SHORT = "${GIT_COMMIT[0..6]}"
+        IMAGE_TAG = 'latest' // or injected from upstream pipeline
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Pull Images') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/rab-tab/movie-booking-kafka-saga.git'
+                sh '''
+                  docker pull rabtab/booking-service:$IMAGE_TAG
+                  docker pull rabtab/seat-inventory-service:$IMAGE_TAG
+                  docker pull rabtab/payment-service:$IMAGE_TAG
+                '''
             }
         }
 
-        stage('Build & Unit Tests') {
+        stage('Start Stack') {
             steps {
-                sh 'mvn -T 1C clean test'
+                sh 'docker-compose up -d'
             }
         }
 
-        stage('Package') {
+        stage('Wait for Services') {
             steps {
-                sh 'mvn -T 1C package -DskipTests'
+                sh '''
+                  sleep 30
+                  docker ps
+                '''
             }
         }
 
-        stage('Docker Build & Push') {
-            parallel {
+        stage('Smoke Tests') {
+            steps {
+                sh '''
+                  curl -f http://localhost:9191/actuator/health
+                  curl -f http://localhost:9292/actuator/health
+                  curl -f http://localhost:9393/actuator/health
+                '''
+            }
+        }
 
-                stage('Booking Service') {
-                    steps {
-                        buildAndPush(
-                            "booking-service",
-                            "booking-service/Dockerfile"
-                        )
-                    }
-                }
-
-                stage('Seat Inventory Service') {
-                    steps {
-                        buildAndPush(
-                            "seat-inventory-service",
-                            "seat-inventory-service/Dockerfile"
-                        )
-                    }
-                }
-
-                stage('Payment Service') {
-                    steps {
-                        buildAndPush(
-                            "payment-service",
-                            "payment-service/Dockerfile"
-                        )
-                    }
-                }
+        stage('Saga Validation (Optional)') {
+            steps {
+                sh '''
+                  curl -X POST http://localhost:9191/book \
+                    -H "Content-Type: application/json" \
+                    -d '{"movieId":1,"seats":["A1"],"amount":200}'
+                '''
             }
         }
     }
 
     post {
         always {
-            sh 'docker logout || true'
+            sh 'docker-compose down -v'
         }
-    }
-}
-
-def buildAndPush(serviceName, dockerfilePath) {
-    withCredentials([
-        usernamePassword(
-            credentialsId: DOCKER_HUB_CREDENTIALS,
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )
-    ]) {
-        sh """
-            echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-
-            docker build \
-              -f ${dockerfilePath} \
-              -t ${DOCKER_REGISTRY}/${serviceName}:${IMAGE_TAG} \
-              -t ${DOCKER_REGISTRY}/${serviceName}:${GIT_COMMIT_SHORT} \
-              ${serviceName}
-
-            docker push ${DOCKER_REGISTRY}/${serviceName}:${IMAGE_TAG}
-            docker push ${DOCKER_REGISTRY}/${serviceName}:${GIT_COMMIT_SHORT}
-        """
     }
 }
