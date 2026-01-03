@@ -45,16 +45,6 @@ pipeline {
                 '''
             }
         }
-
-        stage('Saga Validation (Optional)') {
-            steps {
-                sh '''
-                  curl -X POST http://localhost:9191/book \
-                    -H "Content-Type: application/json" \
-                    -d '{"movieId":1,"seats":["A1"],"amount":200}'
-                '''
-            }
-        }
     }
 
     post {
