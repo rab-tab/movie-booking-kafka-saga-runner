@@ -16,7 +16,11 @@ pipeline {
                 '''
             }
         }
-
+        stage('Cleanup Previous Stack') {
+          steps {
+            sh 'docker-compose down -v --remove-orphans || true'
+          }
+        }
         stage('Start Stack') {
             steps {
                 sh 'docker-compose up -d'
@@ -55,7 +59,9 @@ pipeline {
 
     post {
         always {
-            sh 'docker-compose down -v'
+           sh '''
+                     docker-compose down -v --remove-orphans || true
+                   '''
         }
     }
 }
