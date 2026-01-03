@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   mysql:
     image: mysql:8.1
@@ -15,26 +17,27 @@ services:
       timeout: 5s
       retries: 5
 
+  zookeeper:
+    image: bitnami/zookeeper:3.9.1
+    container_name: zookeeper
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"
+
   kafka:
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.6.1
     container_name: kafka
     ports:
       - "9092:9092"
     environment:
-      # KRaft mode (no Zookeeper)
-      KAFKA_CFG_NODE_ID: 1
-      KAFKA_CFG_PROCESS_ROLES: broker,controller
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-
-      # Listeners
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-
-      # Convenience
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
       ALLOW_PLAINTEXT_LISTENER: "yes"
+    depends_on:
+      - zookeeper
 
   jaeger:
     image: jaegertracing/all-in-one:1.49
@@ -55,9 +58,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      - mysql
-      - kafka
-      - jaeger
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      jaeger:
+        condition: service_started
 
   payment-service:
     image: rabtab/payment-service:latest
@@ -71,9 +77,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      - mysql
-      - kafka
-      - jaeger
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      jaeger:
+        condition: service_started
 
   seat-inventory-service:
     image: rabtab/seat-inventory-service:latest
@@ -87,9 +96,12 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      - mysql
-      - kafka
-      - jaeger
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      jaeger:
+        condition: service_started
 
 volumes:
   mysql_data:
