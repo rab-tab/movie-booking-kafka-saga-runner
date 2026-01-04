@@ -6,6 +6,14 @@ pipeline {
     }
 
     stages {
+        stage('Docker Cleanup') {
+          steps {
+            sh '''
+              docker-compose down -v --remove-orphans || true
+              docker rm -f jaeger || true
+            '''
+          }
+        }
 
         stage('Pull Images') {
             steps {
