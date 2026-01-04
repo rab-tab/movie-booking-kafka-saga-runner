@@ -8,7 +8,6 @@ services:
 
   mysql:
     image: mysql:8.1
-    container_name: mysql
     networks:
       - movie-booking-net
     ports:
@@ -31,7 +30,6 @@ services:
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.6-1-ubi8
-    container_name: zookeeper
     networks:
       - movie-booking-net
     ports:
@@ -47,7 +45,6 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1-1-ubi8
-    container_name: kafka
     networks:
       - movie-booking-net
     ports:
@@ -71,7 +68,6 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:1.49
-    container_name: jaeger
     networks:
       - movie-booking-net
     ports:
@@ -80,7 +76,6 @@ services:
 
   booking-service:
     image: rabtab/booking-service:latest
-    container_name: booking-service
     networks:
       - movie-booking-net
     ports:
@@ -105,7 +100,6 @@ services:
 
   payment-service:
     image: rabtab/payment-service:latest
-    container_name: payment-service
     networks:
       - movie-booking-net
     ports:
@@ -130,7 +124,6 @@ services:
 
   seat-inventory-service:
     image: rabtab/seat-inventory-service:latest
-    container_name: seat-inventory-service
     networks:
       - movie-booking-net
     ports:
