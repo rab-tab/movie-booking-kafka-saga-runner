@@ -1,7 +1,16 @@
+version: "3.8"
+
+networks:
+  movie-booking-net:
+    driver: bridge
+
 services:
+
   mysql:
     image: mysql:8.1
     container_name: mysql
+    networks:
+      - movie-booking-net
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: javatechie
@@ -13,35 +22,55 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.6-1-ubi8
     container_name: zookeeper
+    networks:
+      - movie-booking-net
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1-1-ubi8
     container_name: kafka
+    networks:
+      - movie-booking-net
     ports:
       - "9092:9092"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-    depends_on:
-      - zookeeper
+    healthcheck:
+      test: ["CMD", "bash", "-c", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   jaeger:
     image: jaegertracing/all-in-one:1.49
+    container_name: jaeger
+    networks:
+      - movie-booking-net
     ports:
       - "16686:16686"
       - "4317:4317"
@@ -49,50 +78,83 @@ services:
   booking-service:
     image: rabtab/booking-service:latest
     container_name: booking-service
+    networks:
+      - movie-booking-net
     ports:
       - "9191:9191"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/javatechie
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      - mysql
-      - kafka
-      - jaeger
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9191/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   payment-service:
     image: rabtab/payment-service:latest
     container_name: payment-service
+    networks:
+      - movie-booking-net
     ports:
       - "9292:9292"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/javatechie
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      - mysql
-      - kafka
-      - jaeger
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9292/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   seat-inventory-service:
     image: rabtab/seat-inventory-service:latest
     container_name: seat-inventory-service
+    networks:
+      - movie-booking-net
     ports:
       - "9393:9393"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/javatechie
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      - mysql
-      - kafka
-      - jaeger
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9393/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
 volumes:
   mysql_data:
