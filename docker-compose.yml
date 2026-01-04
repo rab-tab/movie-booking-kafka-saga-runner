@@ -13,15 +13,24 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: javatechie
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      MYSQL_ROOT_HOST: "%"
+      command:
+        - --default-authentication-plugin=mysql_native_password
+        - --skip-name-resolve
+      ports:
+        - "3306:3306"
+      volumes:
+        - mysql_data:/var/lib/mysql
+      healthcheck:
+        test:
+          [
+            "CMD-SHELL",
+            "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"
+          ]
+        interval: 10s
+        timeout: 5s
+        retries: 30
+        start_period: 40s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.6-1-ubi8
