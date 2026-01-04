@@ -86,7 +86,7 @@ services:
       mysql:
         condition: service_healthy
       kafka:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:9191/actuator/health | grep UP || exit 1"]
       interval: 10s
@@ -110,7 +110,7 @@ services:
       mysql:
         condition: service_healthy
       kafka:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:9292/actuator/health | grep UP || exit 1"]
       interval: 10s
@@ -134,7 +134,7 @@ services:
       mysql:
         condition: service_healthy
       kafka:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:9393/actuator/health | grep UP || exit 1"]
       interval: 10s
