@@ -18,7 +18,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -33,7 +33,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      test: ["CMD-SHELL", "echo ruok | timeout 5 bash -c 'cat > /dev/tcp/localhost/2181' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -58,7 +58,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     healthcheck:
-      test: ["CMD", "bash", "-c", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -89,10 +89,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      jaeger:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9191/actuator/health"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:9191/actuator/health | grep UP || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -115,10 +113,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      jaeger:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9292/actuator/health"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:9292/actuator/health | grep UP || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -141,10 +137,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      jaeger:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9393/actuator/health"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:9393/actuator/health | grep UP || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
