@@ -8,32 +8,30 @@ services:
 
   mysql:
     image: mysql:8.1
+    container_name: mysql
     networks:
       - movie-booking-net
+    ports:
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: javatechie
       MYSQL_ROOT_HOST: "%"
-      command:
-        - --default-authentication-plugin=mysql_native_password
-        - --skip-name-resolve
-      ports:
-        - "3306:3306"
-      volumes:
-        - mysql_data:/var/lib/mysql
-      healthcheck:
-        test:
-          [
-            "CMD-SHELL",
-            "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"
-          ]
-        interval: 10s
-        timeout: 5s
-        retries: 30
-        start_period: 40s
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --skip-name-resolve
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.6-1-ubi8
+    container_name: zookeeper
     networks:
       - movie-booking-net
     ports:
@@ -49,6 +47,7 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1-1-ubi8
+    container_name: kafka
     networks:
       - movie-booking-net
     ports:
@@ -59,10 +58,8 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -74,6 +71,7 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:1.49
+    container_name: jaeger
     networks:
       - movie-booking-net
     ports:
@@ -82,6 +80,7 @@ services:
 
   booking-service:
     image: rabtab/booking-service:latest
+    container_name: booking-service
     networks:
       - movie-booking-net
     ports:
@@ -106,6 +105,7 @@ services:
 
   payment-service:
     image: rabtab/payment-service:latest
+    container_name: payment-service
     networks:
       - movie-booking-net
     ports:
@@ -130,6 +130,7 @@ services:
 
   seat-inventory-service:
     image: rabtab/seat-inventory-service:latest
+    container_name: seat-inventory-service
     networks:
       - movie-booking-net
     ports:
